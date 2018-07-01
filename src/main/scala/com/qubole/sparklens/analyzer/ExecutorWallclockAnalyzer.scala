@@ -94,7 +94,7 @@ class ExecutorWallclockAnalyzer extends  AppAnalyzer {
     out.println(s"${Console.GREEN} The optimized number of executors is ${optimizedExecutorCount} with estimated time ${pd(optimizedEstimatedTime)}${Console.RESET}.\n")
     out.println("\n")
 
-    analyzeBasedOnCore(ac, out, optimizedExecutorCount, optimizedEstimatedTime)
+    analyzeBasedOnExecutorCount(ac, out, optimizedExecutorCount, optimizedEstimatedTime)
     out.toString()
   }
 
@@ -135,7 +135,7 @@ class ExecutorWallclockAnalyzer extends  AppAnalyzer {
        """.stripMargin)
   }
 
-  def analyzeBasedOnCore(ac: AppContext, out: mutable.StringBuilder, optimizedExecutorCount: Int,
+  def analyzeBasedOnExecutorCount(ac: AppContext, out: mutable.StringBuilder, optimizedExecutorCount: Int,
                          optimizedEstimatedTime: Long): Unit = {
     out.println("\n")
     val m4largeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m4large", "core" -> "2", "memory" -> "8", "cost" -> "0.1")
@@ -154,15 +154,126 @@ class ExecutorWallclockAnalyzer extends  AppAnalyzer {
           maxTaskExecutionTimes = x._2.taskExecutionTimes.length
         }
       })
+
     out.println(" The maximum number of tasks at any stage is " + maxTaskExecutionTimes)
     val requiredCoresPerInstance = Math.ceil(maxTaskExecutionTimes/optimizedExecutorCount).toInt
     out.println(" The number of required cores per instance is " + requiredCoresPerInstance)
 
     /*out.println(" The number of cores per executor is " + coresPerExecutor)
     val requiredExecutors = Math.ceil(maxTaskExecutionTimes/coresPerExecutor).toInt
-    out.println(" The number of executors required to run all tasks in parallel is " + requiredExecutors + " (max # of tasks / cores per execution)")
+    out.println(" The number of executors required to run all tasks in parallel is " + requiredExecutors + " (max # of tasks at any stage / cores per execution)")
     val totalCores = ac.executorMap.values.map(x => x.cores).sum
     out.println(" The total number of required cores are " + totalCores)*/
+
+    //Memory Analysis
+    /*ac.stageMap.foreach(x => out.println(" \n The peak execution memory at stageID " + x._2.stageID + " is " + x._2.stageMetrics.map(AggregateMetrics.peakExecutionMemory).value))
+    var maxPeakExecutionMemory = 0.toLong
+    ac.stageMap.
+      foreach( x => {
+        val peakExecutionMemoryAtStage = x._2.stageMetrics.map(AggregateMetrics.peakExecutionMemory).value
+
+        if (maxPeakExecutionMemory < peakExecutionMemoryAtStage) {
+          maxPeakExecutionMemory =  peakExecutionMemoryAtStage
+        }
+      })
+
+    if (maxPeakExecutionMemory != 0) {
+      maxPeakExecutionMemory / (1024)
+    }
+    out.println(" The maximum peak execution memory at any stage is " + maxPeakExecutionMemory + "MB")*/
+
+    var executorsPerInstance = 0
+    instanceTypes.foreach ( instanceType => {
+      val instanceName = instanceType("name")
+      out.println("\n ***** " + instanceName + " ANALYSIS *****")
+      /*val numInstance = Math.ceil(totalCores/instanceType("core").toInt).toInt
+      instanceType += "numInstance" -> numInstance.toString
+      out.println(" The number of " + instanceName + " instances: " + numInstance)*/
+      //      out.println(" The optimizedEstimatedTime in second: " + TimeUnit.MILLISECONDS.toSeconds(optimizedEstimatedTime))
+      val totalCost = TimeUnit.MILLISECONDS.toSeconds(optimizedEstimatedTime) * instanceType("cost").toDouble/3600 * optimizedExecutorCount
+      out.println(" The total cost will be $" +  totalCost)
+      instanceType += "totalCost" -> totalCost.toString
+
+      /*val executorsPerInstanceBasedOnCore = (instanceType("core").toInt / coresPerExecutor)
+      out.println(" The number of executors to fit in one " + instanceName + " instance based on core is " + executorsPerInstanceBasedOnCore)*/
+
+
+      /*if (maxPeakExecutionMemory != 0) {
+        val executorsPerInstanceBasedOnMemory = instanceType("memory").toLong*1024 / maxPeakExecutionMemory
+        out.println(" The number of executors to fit in one " + instanceName + " instance based on memory is " + executorsPerInstanceBasedOnMemory)
+        if (executorsPerInstanceBasedOnCore < executorsPerInstanceBasedOnMemory) {
+          executorsPerInstance = executorsPerInstanceBasedOnCore
+        } else {
+          executorsPerInstance = executorsPerInstanceBasedOnMemory.toInt
+        }
+      }*/
+
+      /*executorsPerInstance = executorsPerInstanceBasedOnCore
+      if (executorsPerInstance == 0 ) {
+        out.println(" WARNING: Not a single executor would fit in one " + instanceName + " instance!!")
+      } else {
+        val requiredInstance = Math.ceil(requiredExecutors / executorsPerInstance).toInt
+        out.println(" The minimum number of " + instanceName + " instances to run al tasks in parallel is " + requiredInstance + " (# of required executors / # of executors per instance)")
+      }*/
+
+    })
+
+    /*var leastTotalCost = 0.toDouble
+    var leastCostInstanceType = ""
+    instanceTypes.foreach ( instanceType => {
+      if (leastTotalCost == 0 || instanceType("totalCost").toDouble < leastTotalCost) {
+        leastTotalCost = instanceType("totalCost").toDouble
+        leastCostInstanceType = instanceType("name")
+//        leastNumInstance = instanceType("numInstance")
+      }
+    })*/
+
+    var optimizedInstanceType = ""
+    var optimizedTotalCost = 0.toDouble
+    instanceTypes.foreach ( instanceType => {
+      if (optimizedInstanceType.equalsIgnoreCase("") && instanceType("core").toInt >= requiredCoresPerInstance) {
+        optimizedInstanceType = instanceType("name")
+        optimizedTotalCost = instanceType("totalCost").toDouble
+      }
+    })
+    out.println(s"\n${Console.GREEN} The total optimized cost will be $$"
+      + BigDecimal(optimizedTotalCost).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble
+      + " with " + optimizedExecutorCount + " " + optimizedInstanceType + s" instances${Console.RESET}")
+  }
+
+  def analyzeBasedOnCore(ac: AppContext, out: mutable.StringBuilder, coresPerExecutor: Int, optimizedExecutorCount: Int,
+                                  optimizedEstimatedTime: Long): Unit = {
+    out.println("\n")
+    val m4largeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m4large", "core" -> "2", "memory" -> "8", "cost" -> "0.1")
+    val m4xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m4xlarge", "core" -> "4", "memory" -> "16", "cost" -> "0.2")
+    val m42xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m42xlarge", "core" -> "8", "memory" -> "32", "cost" -> "0.4")
+    val m44xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m44xlarge", "core" -> "16", "memory" -> "64", "cost" -> "0.8")
+    val m410xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m410xlarge", "core" -> "40", "memory" -> "160", "cost" -> "2")
+    val m416xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m416xlarge", "core" -> "64", "memory" -> "256", "cost" -> "3.2")
+    val instanceTypes: List[mutable.Map[String, String]] = List(m4largeMap, m4xlargeMap, m42xlargeMap, m44xlargeMap, m410xlargeMap, m416xlargeMap)
+
+    ac.stageMap.foreach(x => out.println(" The number of task at stageID " + x._2.stageID + " is " + x._2.taskExecutionTimes.length))
+    var maxTaskNumAtStage = 0
+    ac.stageMap.
+      foreach( x => {
+        if (maxTaskNumAtStage < x._2.taskExecutionTimes.length) {
+          maxTaskNumAtStage = x._2.taskExecutionTimes.length
+        }
+      })
+
+    // Get # of cores per instance if all tasks must run in parallel
+    out.println(" The maximum number of tasks at a stage is " + maxTaskNumAtStage)
+    val requiredCoresPerInstance = Math.ceil(maxTaskNumAtStage/optimizedExecutorCount).toInt
+    out.println(" The number of required cores per instance is " + requiredCoresPerInstance)
+
+    // Get # of executors if all tasks must run in parallel
+    out.println(" The number of cores per executor is " + coresPerExecutor)
+    val requiredExecutors = Math.ceil(maxTaskNumAtStage/coresPerExecutor).toInt
+    out.println(" The number of executors required to run all tasks in parallel is " + requiredExecutors + " (max # of tasks / cores per execution)")
+
+    // Get # of required cores
+    val totalCores = ac.executorMap.values.map(x => x.cores).sum
+    out.println(" The total number of required cores are " + totalCores)
 
     //Memory Analysis
     /*ac.stageMap.foreach(x => out.println(" \n The peak execution memory at stageID " + x._2.stageID + " is " + x._2.stageMetrics.map(AggregateMetrics.peakExecutionMemory).value))
