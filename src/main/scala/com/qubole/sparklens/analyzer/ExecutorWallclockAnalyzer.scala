@@ -395,7 +395,7 @@ class ExecutorWallclockAnalyzer extends  AppAnalyzer {
         optimizedInstanceType = instanceType("name")
       }
     })
-    out.println(s"\n${Console.GREEN} The optimized configuration to run all tasks in parallel is " + maxTaskNumAtStage + " many of " + optimizedInstanceType + s" instances${Console.RESET}")
+    out.println(s"\n${Console.GREEN} The optimized configuration to run all tasks in parallel is " + numExecutorsBasedOnMaxTaskNumAtStage + " many of " + optimizedInstanceType + s" instances${Console.RESET}")
 
   }
 }
