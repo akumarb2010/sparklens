@@ -244,13 +244,13 @@ class ExecutorWallclockAnalyzer extends  AppAnalyzer {
   def analyzeBasedOnCoreAndMemory(ac: AppContext, out: mutable.StringBuilder, coresPerExecutor: Int, optimizedExecutorCount: Int,
                                   optimizedEstimatedTime: Long): Unit = {
     out.println("\n")
-    val m4largeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m4large", "core" -> "2", "memory" -> "8", "cost" -> "0.1")
-    val m4xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m4xlarge", "core" -> "4", "memory" -> "16", "cost" -> "0.2")
-    val m42xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m42xlarge", "core" -> "8", "memory" -> "32", "cost" -> "0.4")
-    val m44xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m44xlarge", "core" -> "16", "memory" -> "64", "cost" -> "0.8")
-    val m410xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m410xlarge", "core" -> "40", "memory" -> "160", "cost" -> "2")
-    val m416xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m416xlarge", "core" -> "64", "memory" -> "256", "cost" -> "3.2")
-    val instanceTypes: List[mutable.Map[String, String]] = List(m4largeMap, m4xlargeMap, m42xlargeMap, m44xlargeMap, m410xlargeMap, m416xlargeMap)
+    val m5largeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m5large", "core" -> "2", "memory" -> "8", "cost" -> "0.096")
+    val m5xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m5xlarge", "core" -> "4", "memory" -> "16", "cost" -> "0.192")
+    val m52xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m52xlarge", "core" -> "8", "memory" -> "32", "cost" -> "0.384")
+    val m54xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m54xlarge", "core" -> "16", "memory" -> "64", "cost" -> "0.768")
+    val m512xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m512xlarge", "core" -> "48", "memory" -> "192", "cost" -> "2.304")
+    val m524xlargeMap: mutable.Map[String, String] = mutable.HashMap("name" -> "m524xlarge", "core" -> "96", "memory" -> "384", "cost" -> "4.608")
+    val instanceTypes: List[mutable.Map[String, String]] = List(m5largeMap, m5xlargeMap, m52xlargeMap, m54xlargeMap, m512xlargeMap, m524xlargeMap)
 
     ac.stageMap.foreach(x => out.println(" The number of task at stageID " + x._2.stageID + " is " + x._2.taskExecutionTimes.length))
     var maxTaskNumAtStage = 0
